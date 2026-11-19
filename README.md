@@ -332,19 +332,128 @@ The Azure Portal confirms that `ADV-Backend-Subnet` (`10.0.1.0/24`) is associate
 5. **Security must follow requirements:** An empty subnet did not justify invented application ports, but Azure's default NSG rules are not equivalent to strict isolation.
 6. **Keep source consistent:** The local VS Code project is the source of truth for Terraform configuration files; Azure Blob Storage holds the persistent remote Terraform state, while Cloud Shell serves as the execution environment for this lab.
 
-## 11. Cleanup plan — not yet executed
+## 11. Infrastructure Cleanup — Completed
 
-The deployed lab resources may incur costs. **Do not destroy infrastructure until evidence is captured and a destroy plan has been reviewed and explicitly approved.**
+**Cleanup date:** 19 November 2026  
+**Status:** Completed and verified  
+**Environment:** Microsoft Azure — UK South
 
-When ready, use a separate reviewed destroy workflow from the correct project directory and subscription. Confirm that only the five Lab 04 managed resources are targeted. The remote backend resource group `rg-adventis-tfstate`, storage account `stadvterraform04`, and container `tfstate` must be **retained** unless a separate cleanup decision is made.
+### 11.1 Cleanup objective
 
-The command below is an example of a **future planning step only**, not a command to run now:
+Following successful deployment, security configuration, and verification, the Adventis Global Lab 04 infrastructure was decommissioned using Terraform.
+
+The objective was to remove the five Terraform-managed lab resources while retaining the separate remote-state backend.
+
+### 11.2 Pre-destroy verification
+
+Before cleanup, the Terraform state was inspected:
+
+```bash
+terraform state list
+```
+
+The state contained five resources:
+
+```text
+azurerm_network_security_group.backend
+azurerm_resource_group.lab04
+azurerm_subnet.backend
+azurerm_subnet_network_security_group_association.backend
+azurerm_virtual_network.main
+```
+
+### 11.3 Destroy plan and review
+
+A saved destroy plan was generated:
 
 ```bash
 terraform plan -destroy -out=lab04-destroy.tfplan
-terraform show -no-color lab04-destroy.tfplan
-# Apply only after explicit approval and confirmation of the targets.
 ```
+
+Terraform refreshed the existing infrastructure state and produced the following summary:
+
+```text
+Plan: 0 to add, 0 to change, 5 to destroy.
+```
+
+The plan was reviewed before execution to confirm that the five Lab 04 resources were targeted.
+
+The remote-state backend was not included in the destroy plan.
+
+**Evidence — Destroy plan**
+
+![Terraform destroy plan — resource refresh](screenshots/10-destroy-plan01.png)
+
+![Terraform destroy plan — five resources targeted](screenshots/10-destroy-plan02.png)
+
+### 11.4 Destroy execution
+
+Following review, the saved plan was applied:
+
+```bash
+terraform apply "lab04-destroy.tfplan"
+```
+
+Terraform reported:
+
+```text
+Apply complete! Resources: 0 added, 0 changed, 5 destroyed.
+```
+
+**Evidence — Successful destruction**
+
+![Terraform destroy completed successfully](screenshots/11-destroy-complete.png)
+
+### 11.5 Post-destroy verification
+
+Two checks were performed to verify cleanup.
+
+**Terraform state verification**
+
+```bash
+terraform state list
+```
+
+The command returned no resource addresses, confirming that Terraform no longer tracked any Lab 04 infrastructure resources.
+
+**Azure resource group verification**
+
+```bash
+az group exists --name rg-adventis-tf-lab04
+```
+
+Result:
+
+```text
+false
+```
+
+This independently confirmed that the Lab 04 resource group no longer existed in Azure.
+
+**Evidence — Final cleanup verification**
+
+![Terraform state empty and Azure resource group deleted](screenshots/12-azure-cleanup-verification.png)
+
+### 11.6 Remote-state backend retention
+
+The following resources were intentionally excluded from the Lab 04 Terraform destroy operation:
+
+| Resource | Name | Cleanup decision |
+|---|---|---|
+| Remote-state resource group | `rg-adventis-tfstate` | Retained |
+| Azure Storage account | `stadvterraform04` | Retained |
+| Blob container | `tfstate` | Retained |
+| Terraform state blob | `lab04.tfstate` | Not targeted for deletion |
+
+The remote-state backend is managed separately from the Lab 04 infrastructure. Any future deletion requires a separate review and approval.
+
+### 11.7 Cleanup outcome
+
+**Lab 04 infrastructure cleanup was completed successfully on 19 November 2026.**
+
+The exercise demonstrated the complete Terraform infrastructure lifecycle: provisioning, configuration, validation, state management, controlled destruction, and post-destroy verification.
+
+The Terraform configuration and supporting evidence remain available in this repository for documentation and reproducibility.
 
 ## 12. Further development
 
